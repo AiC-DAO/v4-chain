@@ -188,6 +188,7 @@ importers:
       objection-unique: 1.2.2_objection@2.2.18
       pg: 8.7.3
       ts-node: 10.8.2_2dd5d46eecda2aef953638919121af58
+      typescript: 4.7.4
       uuid: 8.3.2
     devDependencies:
       '@dydxprotocol-indexer/dev': link:../dev
@@ -199,7 +200,6 @@ importers:
       '@types/pg': 8.6.5
       '@types/uuid': 8.3.4
       jest: 28.1.2_250642e41d506bccecc9f35ad915bcb5
-      typescript: 4.7.4
 
   packages/redis:
     specifiers:

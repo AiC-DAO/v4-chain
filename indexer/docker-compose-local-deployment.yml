@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   kafka:
     image: blacktop/kafka:2.6
@@ -6,8 +6,7 @@ services:
       - 9092:9092
     environment:
       KAFKA_ADVERTISED_HOST_NAME: kafka
-      KAFKA_CREATE_TOPICS:
-        "to-ender:1:1,\
+      KAFKA_CREATE_TOPICS: "to-ender:1:1,\
         to-vulcan:1:1,\
         to-websockets-orderbooks:1:1,\
         to-websockets-subaccounts:1:1,\
@@ -19,8 +18,13 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL_SAME_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       DD_AGENT_HOST: datadog-agent
+      REDIS_URL: redis://redis:6379
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --topic to-websockets-candles --describe"]
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --topic to-websockets-candles --describe",
+        ]
       interval: 5s
       timeout: 20s
       retries: 50
@@ -35,6 +39,7 @@ services:
       POSTGRES_PASSWORD: dydxserver123
       POSTGRES_USER: dydx_dev
       DATADOG_POSTGRES_PASSWORD: dydxserver123
+      REDIS_URL: redis://redis:6379
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dydx_dev"]
       interval: 5s
@@ -43,31 +48,26 @@ services:
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "postgres"}]'
       com.datadoghq.ad.check_names: '["postgres"]'
-      com.datadoghq.ad.init_configs: '[{}]'
+      com.datadoghq.ad.init_configs: "[{}]"
       com.datadoghq.ad.instances: '[{"host":"%%host%%", "port":5432,"username":"datadog","password":"dydxserver123"}]'
   redis:
     image: redis:5.0.6-alpine
     ports:
-      - 6382:6379
+    - 6382:6379
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "redis"}]'
       com.datadoghq.ad.check_names: '["redisdb"]'
-      com.datadoghq.ad.init_configs: '[{}]'
+      com.datadoghq.ad.init_configs: "[{}]"
       com.datadoghq.ad.instances: '[{"host": "%%host%%","port":"6379","password":"%%env_REDIS_PASSWORD%%"}]'
   datadog-agent:
     build: datadog
-    links:
-      - redis
-      - vulcan
-      - comlink
-      - ender
     environment:
-      - DD_API_KEY=${DD_API_KEY}
-      - DD_LOGS_ENABLED=true
-      - DD_TAGS="service:local-indexer dev:${USER}"
-      - DD_APM_ENABLED=true
-      - DD_APM_NON_LOCAL_TRAFFIC=true
-      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+      DD_API_KEY: ${DD_API_KEY}
+      DD_LOGS_ENABLED: true
+      DD_TAGS: "service:local-indexer dev:${USER}"
+      DD_APM_ENABLED: true
+      DD_APM_NON_LOCAL_TRAFFIC: true
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /proc/:/host/proc/:ro
@@ -77,8 +77,6 @@ services:
   postgres-package:
     build:
       dockerfile: Dockerfile.postgres-package.local
-    links:
-      - postgres
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,14 +87,13 @@ services:
         service: ender
     ports:
       - 3001:3001
-    links:
-      - postgres
     environment:
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      - DD_PROFILING_ENABLED=true
-      - DD_ENV=localnet_${USER}
-      - DD_AGENT_HOST=datadog-agent
+      DD_PROFILING_ENABLED: true
+      DD_ENV: localnet_${USER}
+      DD_AGENT_HOST: datadog-agent
+      REDIS_URL: redis://redis:6379
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "ender"}]'
     depends_on:
@@ -113,17 +110,16 @@ services:
     environment:
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      - DD_PROFILING_ENABLED=true
-      - DD_ENV=localnet_${USER}
-      - DD_AGENT_HOST=datadog-agent
-      - TENDERMINT_WS_URL=host.docker.internal:26657 # connects to localhost:26657 on host machine
-      - PORT=3002
+      DD_PROFILING_ENABLED: true
+      DD_ENV: localnet_${USER}
+      DD_AGENT_HOST: datadog-agent
+      TENDERMINT_WS_URL: host.docker.internal:26657 # connects to localhost:26657 on host machine
+      PORT: 3002
+      REDIS_URL: redis://redis:6379
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "comlink"}]'
     ports:
       - 3002:3002
-    links:
-      - postgres
     depends_on:
       postgres-package:
         condition: service_completed_successfully
@@ -134,16 +130,14 @@ services:
         service: socks
     ports:
       - 3003:3003
-    links:
-      - postgres
     environment:
-      - WS_PORT=3003
+      WS_PORT: 3003
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      - DD_PROFILING_ENABLED=true
-      - DD_ENV=localnet_${USER}
-      - DD_AGENT_HOST=datadog-agent
-      - COMLINK_URL=host.docker.internal:3002
+      DD_PROFILING_ENABLED: true
+      DD_ENV: localnet_${USER}
+      DD_AGENT_HOST: datadog-agent
+      COMLINK_URL: comlink:3002
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "socks"}]'
     depends_on:
@@ -158,14 +152,12 @@ services:
         service: roundtable
     ports:
       - 3004:3004
-    links:
-      - postgres
     environment:
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      - DD_PROFILING_ENABLED=true
-      - DD_ENV=localnet_${USER}
-      - DD_AGENT_HOST=datadog-agent
+      DD_PROFILING_ENABLED: true
+      DD_ENV: localnet_${USER}
+      DD_AGENT_HOST: datadog-agent
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "roundtable"}]'
     depends_on:
@@ -181,9 +173,9 @@ services:
     environment:
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      - DD_PROFILING_ENABLED=true
-      - DD_ENV=localnet_${USER}
-      - DD_AGENT_HOST=datadog-agent
+      DD_PROFILING_ENABLED: true
+      DD_ENV: localnet_${USER}
+      DD_AGENT_HOST: datadog-agent
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "vulcan"}]'
     ports:

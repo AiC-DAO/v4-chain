@@ -5,7 +5,7 @@ services:
     ports:
       - 9092:9092
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_HOST_NAME: 95.217.76.105
       KAFKA_CREATE_TOPICS: "to-ender:1:1,\
         to-vulcan:1:1,\
         to-websockets-orderbooks:1:1,\
@@ -13,10 +13,10 @@ services:
         to-websockets-trades:1:1,\
         to-websockets-markets:1:1,\
         to-websockets-candles:1:1"
-      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL_SAME_HOST://:29092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL_SAME_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL_SAME_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL_SAME_HOST://:29092
+      # KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL_SAME_HOST://localhost:29092
+      # KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL_SAME_HOST:PLAINTEXT
+      # KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       DD_AGENT_HOST: datadog-agent
       REDIS_URL: redis://redis:6379
     healthcheck:
@@ -62,12 +62,12 @@ services:
   datadog-agent:
     build: datadog
     environment:
-      DD_API_KEY: ${DD_API_KEY}
-      DD_LOGS_ENABLED: true
-      DD_TAGS: "service:local-indexer dev:${USER}"
-      DD_APM_ENABLED: true
-      DD_APM_NON_LOCAL_TRAFFIC: true
-      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: true
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_LOGS_ENABLED=true
+      - DD_TAGS="service:local-indexer dev:${USER}"
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /proc/:/host/proc/:ro
@@ -90,10 +90,12 @@ services:
     environment:
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      DD_PROFILING_ENABLED: true
-      DD_ENV: localnet_${USER}
-      DD_AGENT_HOST: datadog-agent
-      REDIS_URL: redis://redis:6379
+      - DD_PROFILING_ENABLED=true
+      - DD_ENV=localnet_${USER}
+      - DD_AGENT_HOST=datadog-agent
+      - REDIS_URL=redis://redis:6379
+      - DB_HOSTNAME=postgres
+      - DB_READONLY_HOSTNAME=postgres
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "ender"}]'
     depends_on:
@@ -116,6 +118,10 @@ services:
       TENDERMINT_WS_URL: host.docker.internal:26657 # connects to localhost:26657 on host machine
       PORT: 3002
       REDIS_URL: redis://redis:6379
+      RATE_LIMIT_REDIS_URL: redis://redis:6379
+      INDEXER_LEVEL_GEOBLOCKING_ENABLED: false
+      DB_HOSTNAME: postgres
+      DB_READONLY_HOSTNAME: postgres
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "comlink"}]'
     ports:
@@ -131,13 +137,15 @@ services:
     ports:
       - 3003:3003
     environment:
-      WS_PORT: 3003
+      - WS_PORT=3003
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      DD_PROFILING_ENABLED: true
-      DD_ENV: localnet_${USER}
-      DD_AGENT_HOST: datadog-agent
-      COMLINK_URL: comlink:3002
+      - DD_PROFILING_ENABLED=true
+      - DD_ENV=localnet_${USER}
+      - DD_AGENT_HOST=datadog-agent
+      - COMLINK_URL=comlink:3002
+      - DB_HOSTNAME=postgres
+      - DB_READONLY_HOSTNAME=postgres
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "socks"}]'
     depends_on:
@@ -155,9 +163,19 @@ services:
     environment:
       # See https://docs.datadoghq.com/profiler/enabling/nodejs/ for DD_ specific environment variables.
       # Note that DD_SERVICE and DD_VERSION are read by default from package.json
-      DD_PROFILING_ENABLED: true
-      DD_ENV: localnet_${USER}
-      DD_AGENT_HOST: datadog-agent
+      - DD_PROFILING_ENABLED=true
+      - DD_ENV=localnet_${USER}
+      - DD_AGENT_HOST=datadog-agent
+      - AWS_ACCOUNT_ID="wade aws account"
+      - AWS_REGION="USA"
+      - S3_BUCKET_ARN="123456"
+      - ECS_TASK_ROLE_ARN="123456"
+      - KMS_KEY_ARN="123456"
+      - RDS_INSTANCE_NAME="redis"
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKER_URLS=kafka:9092
+      - DB_HOSTNAME=postgres
+      - DB_READONLY_HOSTNAME=postgres
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "roundtable"}]'
     depends_on:
@@ -176,6 +194,9 @@ services:
       DD_PROFILING_ENABLED: true
       DD_ENV: localnet_${USER}
       DD_AGENT_HOST: datadog-agent
+      REDIS_URL: redis://redis:6379
+      DB_HOSTNAME: postgres
+      DB_READONLY_HOSTNAME: postgres
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "vulcan"}]'
     ports:

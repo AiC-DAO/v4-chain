@@ -53,7 +53,7 @@ services:
   redis:
     image: redis:5.0.6-alpine
     ports:
-    - 6382:6379
+      - 6382:6379
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "redis"}]'
       com.datadoghq.ad.check_names: '["redisdb"]'
@@ -96,6 +96,8 @@ services:
       - REDIS_URL=redis://redis:6379
       - DB_HOSTNAME=postgres
       - DB_READONLY_HOSTNAME=postgres
+      - DB_PORT=5432
+      - KAFKA_BROKER_URLS=kafka:9092
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "ender"}]'
     depends_on:
@@ -119,13 +121,12 @@ services:
       PORT: 3002
       REDIS_URL: redis://redis:6379
       RATE_LIMIT_REDIS_URL: redis://redis:6379
-      INDEXER_LEVEL_GEOBLOCKING_ENABLED: false
+      INDEXER_LEVEL_GEOBLOCKING_ENABLED: false # 关闭 GEO 限制
       DB_HOSTNAME: postgres
       DB_READONLY_HOSTNAME: postgres
+      DB_PORT: 5432
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "comlink"}]'
-    ports:
-      - 3002:3002
     depends_on:
       postgres-package:
         condition: service_completed_successfully
@@ -146,6 +147,8 @@ services:
       - COMLINK_URL=comlink:3002
       - DB_HOSTNAME=postgres
       - DB_READONLY_HOSTNAME=postgres
+      - DB_PORT=5432
+      - KAFKA_BROKER_URLS=kafka:9092
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "socks"}]'
     depends_on:
@@ -176,6 +179,7 @@ services:
       - KAFKA_BROKER_URLS=kafka:9092
       - DB_HOSTNAME=postgres
       - DB_READONLY_HOSTNAME=postgres
+      - DB_PORT=5432
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "roundtable"}]'
     depends_on:
@@ -197,6 +201,8 @@ services:
       REDIS_URL: redis://redis:6379
       DB_HOSTNAME: postgres
       DB_READONLY_HOSTNAME: postgres
+      DB_PORT: 5432
+      KAFKA_BROKER_URLS: kafka:9092
     labels:
       com.datadoghq.ad.logs: '[{"source": "indexer", "service": "vulcan"}]'
     ports:
@@ -204,3 +210,12 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+  nginx:
+    image: nginx
+    container_name: nginx
+    hostname: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /home/dydx_indexer/nginx:/etc/nginx
